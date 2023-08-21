@@ -58,34 +58,42 @@ pipeline {
       }
     }
 
-    /* stage("publish") { */
-    /*   agent any */
-    /*   when { */
-    /*     branch "master" */
-    /*     changeset "**/worker/**" */
-    /*   } */
-    /*   steps { */
-    /*     echo "Publishing worker app to dockerhub" */
-    /*     script { */
-    /*       docker.withRegistry("https://index.docker.io/v1", "dockerlogin") { */
-    /*         def workerImage = docker.build("raychan96/worker:v${env.BUILD_ID}", "./worker") */
-    /*         workerImage.push() */
-    /*         workerImage.push("${env.BRANCH_NAME}") */
-    /*         workerImage.push("latest") */
-    /*       } */
-    /*     } */
-    /*   } */
-    /* } */
+    stage("Sonarqube") {
+      agent any
+      when {
+        branch 'master'
+      }
+
+      environment {
+        sonarpath = tool "SonarScanner"
+      }
+
+      steps {
+        echo "Running Sonarqube Analysis.."
+        withSonarQubeEnv("sonar-instavote") {
+          sh "${sonarpath}/bin/sonar-scanner -Dproject.settings=sonar-project.properties -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.HEARTBEAT_CHECK_INTERVAL=86400"
+        }
+      }
+    }
+
+
+    stage("Quality Gate") {
+      steps {
+        timeout(time: 1, unit: "HOURS") {
+            waitForQualityGate abortPipeline: true
+        }
+      }
+    }
 
     stage("deploy") {
       agent any
       when {
         branch "master"
       }
+
       steps {
         echo "Deploying instavote app with docker compose"
         sh "docker compose up -d"
-        }
       }
     }
   }
