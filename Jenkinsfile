@@ -38,6 +38,21 @@ pipeline {
       }
     }
 
+    stage('integration-test') {
+      agent any
+      when {
+        changeset "**/vote/**"
+        branch 'master'
+      }
+
+      steps {
+        echo'RunningIntegrationTestsonvoteapp'
+        dir('vote') {
+          sh'shintegration_test.sh'
+        }
+      }
+    }
+
     stage("package") {
       when {
         branch "master"
